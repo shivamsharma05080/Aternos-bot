@@ -6,8 +6,11 @@ const VERSION = "1.21.11";
 const BOT_USERNAME = "SpicyBot";
 
 let bot;
+let reconnectTimer;
 
 function startBot() {
+  console.log("🔌 Connecting...");
+
   bot = mineflayer.createBot({
     host: HOST,
     port: PORT,
@@ -17,49 +20,63 @@ function startBot() {
   });
 
   bot.once("spawn", () => {
-    console.log("✅ Bot joined SPICY ARMY!");
+    console.log("✅ BOT JOINED SPICY ARMY!");
 
-    // Random walking
+    startMovement();
+  });
+
+  function startMovement() {
+    const directions = ["forward", "back", "left", "right"];
+
     setInterval(() => {
-      if (!bot.entity) return;
+      if (!bot || !bot.entity) return;
 
-      const directions = ["forward", "back", "left", "right"];
-      const dir = directions[Math.floor(Math.random() * directions.length)];
+      const direction =
+        directions[Math.floor(Math.random() * directions.length)];
 
-      bot.setControlState(dir, true);
-
-      setTimeout(() => {
-        bot.setControlState(dir, false);
-      }, 1500);
-    }, 5000);
-  });
-
-  // Auto pickup nearby dropped items
-  bot.on("physicTick", () => {
-    if (!bot.entity) return;
-
-    const items = Object.values(bot.entities).filter(
-      e => e.type === "object" && e.objectType === "Item"
-    );
-
-    for (const item of items) {
-      if (bot.entity.position.distanceTo(item.position) < 3) {
-        bot.lookAt(item.position, true).catch(() => {});
+      // Stop previous movement
+      for (const d of directions) {
+        bot.setControlState(d, false);
       }
-    }
-  });
 
-  bot.on("death", () => {
-    console.log("💀 Bot died — waiting for respawn...");
-  });
+      // Walk
+      bot.setControlState(direction, true);
+
+      // Sometimes jump
+      if (Math.random() < 0.4) {
+        bot.setControlState("jump", true);
+
+        setTimeout(() => {
+          if (bot && bot.entity) {
+            bot.setControlState("jump", false);
+          }
+        }, 400);
+      }
+
+      console.log("🚶 Bot moving:", direction);
+
+      // Change direction after 3 seconds
+      setTimeout(() => {
+        if (bot && bot.entity) {
+          bot.setControlState(direction, false);
+        }
+      }, 3000);
+
+    }, 3500);
+  }
 
   bot.on("kicked", reason => {
     console.log("❌ Kicked:", reason);
   });
 
   bot.on("end", () => {
-    console.log("🔄 Disconnected — reconnecting in 10 seconds...");
-    setTimeout(startBot, 10000);
+    console.log("🔄 Disconnected! Reconnecting in 10 seconds...");
+
+    clearTimeout(reconnectTimer);
+
+    reconnectTimer = setTimeout(() => {
+      startBot();
+    }, 10000);
   });
 
   bot.on("error", err => {
