@@ -3,7 +3,7 @@ const mineflayer = require("mineflayer");
 const HOST = "SPICY_ARMY1.aternos.me";
 const PORT = 40740;
 const VERSION = "1.21.11";
-const BOT_USERNAME = "SpicyBot";
+const BOT_USERNAME = "SoulSMP";
 
 let bot;
 let reconnectTimer;
@@ -20,49 +20,35 @@ function startBot() {
   });
 
   bot.once("spawn", () => {
-    console.log("✅ BOT JOINED SPICY ARMY!");
+    console.log("✅ SpicyBot joined!");
 
-    startMovement();
+    // Normal slow walking
+    movementLoop();
   });
 
-  function startMovement() {
-    const directions = ["forward", "back", "left", "right"];
-
-    setInterval(() => {
-      if (!bot || !bot.entity) return;
-
+  async function movementLoop() {
+    while (bot && bot.entity) {
+      const directions = ["forward", "left", "right", "back"];
       const direction =
         directions[Math.floor(Math.random() * directions.length)];
 
-      // Stop previous movement
-      for (const d of directions) {
-        bot.setControlState(d, false);
-      }
-
-      // Walk
       bot.setControlState(direction, true);
 
-      // Sometimes jump
-      if (Math.random() < 0.4) {
-        bot.setControlState("jump", true);
+      // Walk for 2–4 seconds
+      await sleep(2000 + Math.random() * 2000);
 
-        setTimeout(() => {
-          if (bot && bot.entity) {
-            bot.setControlState("jump", false);
-          }
-        }, 400);
+      bot.setControlState(direction, false);
+
+      // Occasionally jump normally
+      if (Math.random() < 0.2) {
+        bot.setControlState("jump", true);
+        await sleep(300);
+        bot.setControlState("jump", false);
       }
 
-      console.log("🚶 Bot moving:", direction);
-
-      // Change direction after 3 seconds
-      setTimeout(() => {
-        if (bot && bot.entity) {
-          bot.setControlState(direction, false);
-        }
-      }, 3000);
-
-    }, 3500);
+      // Small pause
+      await sleep(1000);
+    }
   }
 
   bot.on("kicked", reason => {
@@ -70,18 +56,22 @@ function startBot() {
   });
 
   bot.on("end", () => {
-    console.log("🔄 Disconnected! Reconnecting in 10 seconds...");
+    console.log("🔄 Disconnected — reconnecting in 30 seconds...");
 
     clearTimeout(reconnectTimer);
 
     reconnectTimer = setTimeout(() => {
       startBot();
-    }, 10000);
+    }, 30000);
   });
 
   bot.on("error", err => {
     console.log("⚠️ Error:", err.message);
   });
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 startBot();
