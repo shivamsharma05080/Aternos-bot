@@ -1,15 +1,25 @@
 const mineflayer = require("mineflayer");
 
+const BOT_USERNAME = "SoulSMP";
 const HOST = "SPICY_ARMY1.aternos.me";
 const PORT = 40740;
 const VERSION = "1.21.11";
-const BOT_USERNAME = "SoulSMP";
 
 let bot;
 let reconnectTimer;
+let walkTimer;
+let chatTimer;
+let messageIndex = 0;
+
+const messages = [
+  "Hi Everyone! Welcome to SoulSMP ❤️",
+  "Kya haal chaal bhaiyo, kaise ho? 😎",
+  "Spicy_Gamerz ko subscribe kr dena ❤️",
+  "Join our Discord! 📢"
+];
 
 function startBot() {
-  console.log("🔌 Connecting...");
+  console.log("🔌 Connecting to SoulSMP...");
 
   bot = mineflayer.createBot({
     host: HOST,
@@ -20,58 +30,100 @@ function startBot() {
   });
 
   bot.once("spawn", () => {
-    console.log("✅ SpicyBot joined!");
+    console.log("✅ SoulBot joined!");
 
-    // Normal slow walking
-    movementLoop();
+    // Spawn par ek baar
+    setTimeout(() => {
+      if (bot.entity) bot.chat("/spawn");
+    }, 5000);
+
+    startWalking();
+    startChat();
   });
 
-  async function movementLoop() {
-    while (bot && bot.entity) {
-      const directions = ["forward", "left", "right", "back"];
-      const direction =
-        directions[Math.floor(Math.random() * directions.length)];
+  // Death -> auto respawn
+  bot.on("death", () => {
+    console.log("💀 SoulSMP died. Respawning...");
 
-      bot.setControlState(direction, true);
-
-      // Walk for 2–4 seconds
-      await sleep(2000 + Math.random() * 2000);
-
-      bot.setControlState(direction, false);
-
-      // Occasionally jump normally
-      if (Math.random() < 0.2) {
-        bot.setControlState("jump", true);
-        await sleep(300);
-        bot.setControlState("jump", false);
+    setTimeout(() => {
+      if (bot && bot.entity) {
+        bot.respawn();
       }
+    }, 1500);
+  });
 
-      // Small pause
-      await sleep(1000);
+  // Player chat commands
+  bot.on("chat", (username, message) => {
+    if (username === bot.username) return;
+
+    if (message === "!rtp") {
+      bot.chat("/rtp");
     }
-  }
+
+    if (message === "!spawn") {
+      bot.chat("/spawn");
+    }
+
+    if (message === "!arena") {
+      bot.chat("/warp arena");
+    }
+
+    if (message === "!shop") {
+      bot.chat("/shop");
+    }
+  });
 
   bot.on("kicked", reason => {
     console.log("❌ Kicked:", reason);
   });
 
+  bot.on("error", err => {
+    console.log("⚠️ Error:", err.message);
+  });
+
+  // Only reconnect after an actual disconnect
   bot.on("end", () => {
-    console.log("🔄 Disconnected — reconnecting in 30 seconds...");
+    stopAll();
+
+    console.log("🔄 Disconnected. Rejoining in 10 seconds...");
 
     clearTimeout(reconnectTimer);
 
     reconnectTimer = setTimeout(() => {
       startBot();
-    }, 30000);
-  });
-
-  bot.on("error", err => {
-    console.log("⚠️ Error:", err.message);
+    }, 10000);
   });
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function startWalking() {
+  stopWalking();
+
+  const directions = ["forward", "left", "right", "back"];
+
+  walkTimer = setInterval(() => {
+    if (!bot || !bot.entity) return;
+
+    directions.forEach(d => bot.setControlState(d, false));
+
+    const direction =
+      directions[Math.floor(Math.random() * directions.length)];
+
+    bot.setControlState(direction, true);
+
+    setTimeout(() => {
+      if (bot && bot.entity) {
+        bot.setControlState(direction, false);
+      }
+    }, 2000);
+
+  }, 4000);
 }
 
-startBot();
+function startChat() {
+  stopChat();
+
+  // Every 20 seconds
+  chatTimer = setInterval(() => {
+    if (!bot || !bot.entity) return;
+
+   
