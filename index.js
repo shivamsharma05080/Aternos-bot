@@ -1,7 +1,7 @@
 const mineflayer = require("mineflayer");
 
 const BOT_USERNAME = "SoulSMP";
-const HOST = "SPICY_ARMY1.aternos.me";
+const HOST = "SoulSMP12.aternos.me";
 const PORT = 40740;
 const VERSION = "1.21.11";
 
